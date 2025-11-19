@@ -1,5 +1,5 @@
-name: Задача
-description: Шаблон для описания задачи с последующей оценкой
+name: Задача                  # ← обязательно
+description: Шаблон для создания и оценки задач   # ← ЭТОТ КЛЮЧ БЫЛ ПРОПУЩЕН!
 title: "[TASK] "
 labels: ["task"]
 assignees: []
@@ -14,8 +14,7 @@ body:
     attributes:
       label: Описание задачи
       description: Подробно опиши, что нужно сделать
-      placeholder: |
-        ...
+      placeholder: ...
     validations:
       required: true
 
@@ -23,9 +22,8 @@ body:
     id: result
     attributes:
       label: Результат
-      description: Как понять, что задача выполнена? Что должно получиться?
-      placeholder: |
-        ...
+      description: Как понять, что задача выполнена?
+      placeholder: ...
     validations:
       required: true
 
@@ -35,22 +33,9 @@ body:
       label: Оценка
       description: |
         Затрачено часов:  
-        Доработка ТЗ исполнителем (1–10):  
-        Комментарии (по желанию):
+        Доработка ТЗ исполнителем (1–10):
       value: |
         Затрачено часов:  
-        Доработка ТЗ исполнителем (1–10):  
+        Доработка ТЗ исполнителем (1–10):
     validations:
       required: false
-
-  - type: checkboxes
-    id: checklists
-    attributes:
-      label: Чек-лист перед отправкой на оценку
-      options:
-        - label: Задача протестирована локально
-          required: false
-        - label: Добавлены/обновлены тесты (если нужно)
-          required: false
-        - label: Код соответствует стилю проекта
-          required: false
