@@ -1,0 +1,56 @@
+name: Задача
+description: Шаблон для описания задачи с последующей оценкой
+title: "[TASK] "
+labels: ["task"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Описание задачи / ТЗ
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание задачи
+      description: Подробно опиши, что нужно сделать
+      placeholder: |
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Результат
+      description: Как понять, что задача выполнена? Что должно получиться?
+      placeholder: |
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: evaluation
+    attributes:
+      label: Оценка
+      description: |
+        Затрачено часов:  
+        Доработка ТЗ исполнителем (1–10):  
+        Комментарии (по желанию):
+      value: |
+        Затрачено часов:  
+        Доработка ТЗ исполнителем (1–10):  
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklists
+    attributes:
+      label: Чек-лист перед отправкой на оценку
+      options:
+        - label: Задача протестирована локально
+          required: false
+        - label: Добавлены/обновлены тесты (если нужно)
+          required: false
+        - label: Код соответствует стилю проекта
+          required: false
