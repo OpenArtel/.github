@@ -1,0 +1,124 @@
+name: Score issue (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      issue_number:
+        required: true
+        type: number
+      command:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout shared .github repo
+        uses: actions/checkout@v4
+        with:
+          repository: OpenArtel/.github
+          ref: main
+          path: shared
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Fetch secrets from Infisical via OIDC
+        uses: Infisical/secrets-action@v1.0.15
+        with:
+          method: oidc
+          identity-id: "93a51961-c91a-49b3-88bc-61c3b4972663"
+          oidc-audience: "https://github.com/OpenArtel"
+          domain: "https://infisical-infra.openartel.com"
+          project-slug: "score-github-action-o9-mx"
+          env-slug: "prod"
+          export-type: "env"
+
+      - name: Validate OPENROUTER_KEY
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENROUTER_KEY:-}" ]; then
+            echo "OPENROUTER_KEY is empty or not set" >&2
+            exit 1
+          fi
+          echo "::add-mask::${OPENROUTER_KEY}"
+
+      - name: Fetch issue to file
+        id: issue
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        with:
+          script: |
+            const fs = require("fs");
+            const path = require("path");
+
+            const issue_number = Number(process.env.ISSUE_NUMBER);
+
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+            });
+
+            const payload = {
+              number: issue.number,
+              title: issue.title ?? "",
+              body: issue.body ?? "",
+              url: issue.html_url ?? "",
+              user: issue.user?.login ?? "",
+              labels: (issue.labels ?? []).map(l => typeof l === "string" ? l : (l.name ?? "")),
+            };
+
+            const outPath = path.join(process.env.GITHUB_WORKSPACE, "issue.json");
+            fs.writeFileSync(outPath, JSON.stringify(payload, null, 2), "utf8");
+            core.setOutput("path", outPath);
+
+      - name: Install dependencies (bun)
+        working-directory: shared/scripts/score-issue
+        run: bun install --frozen-lockfile
+
+      - name: Run score script
+        id: score
+        working-directory: shared/scripts/score-issue
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          COMMAND: ${{ inputs.command }}
+          ISSUE_PATH: ${{ steps.issue.outputs.path }}
+          OPENROUTER_KEY: ${{ env.OPENROUTER_KEY }}
+        run: |
+          set -euo pipefail
+          RESULT="$(bun run src/index.ts)"
+
+          DELIM=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "comment<<$DELIM" >> "$GITHUB_OUTPUT"
+          echo "$RESULT" >> "$GITHUB_OUTPUT"
+          echo "$DELIM" >> "$GITHUB_OUTPUT"
+
+      - name: Comment result back to the issue
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          COMMENT_BODY: ${{ steps.score.outputs.comment }}
+        with:
+          script: |
+            const issue_number = Number(process.env.ISSUE_NUMBER);
+            const body = String(process.env.COMMENT_BODY || "").trim() || "Empty script output.";
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body
+            });
